@@ -1,0 +1,10 @@
+python-dotenv
+langchain
+langchain-community
+langchain-openai
+langchain-core
+langchain-text-splitters
+# langchain-text-splitters
+langchain-ollama
+langchain-mcp-adapters
+langgraph
