@@ -11,6 +11,7 @@ load_dotenv()
 
 class CreateZerodhaAgent:
     def __init__(self):
+        print("inside init of zerodhaagent")
         self.client = MultiServerMCPClient({
             "kite": {
                 "command": "npx",
@@ -44,8 +45,14 @@ class CreateZerodhaAgent:
         await self.agent_ready.wait()  # wait until tools loaded
 
     async def query(self, prompt: str):
+        print("inside query of zerodha agent")
+        print(prompt)
         await self.query_queue.put(prompt)
-        return await self.response_queue.get()
+        
+        response = await self.response_queue.get()
+        print(response)
+        return response
+
 
     async def close(self):
         await self.query_queue.put(None)
