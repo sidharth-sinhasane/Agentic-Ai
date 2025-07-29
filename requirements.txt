@@ -9,3 +9,4 @@ langchain-ollama
 langchain-mcp-adapters
 langgraph
 langchain-groq
+pygraphviz
