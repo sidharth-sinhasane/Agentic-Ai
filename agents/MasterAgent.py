@@ -4,6 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from ZerodhaAgent import CreateZerodhaAgent
 from IPython.display import Image, display
+from SearchAgent import CreateSearchAgent
 class ZerodhaWrapper:
     _instance = None
     _agent = None
@@ -32,8 +33,35 @@ class ZerodhaWrapper:
     async def close(self):
         await self._agent.close()
 
+class SearchWrapper:
+    _instance = None
+    _agent = None
+    _isSetUp= False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(SearchWrapper,cls).__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        if SearchWrapper._agent is None:
+            SearchWrapper._agent = CreateSearchAgent()
+
+    async def setup(self):
+        if self._isSetUp == False:
+            self._isSetUp = True
+            await self._agent.setup()
+
+    async def query(self, prompt:str):
+        return await self._agent.query(prompt)
+    
+    async def close(self):
+        await self._agent.close()
+
+
+
 class GraphState(TypedDict):
-    next_step: Literal["zerodha_agent", "end"]
+    next_step: Literal["zerodha_agent", "end","search_agent"]
     query: str
     response: str
 
@@ -42,7 +70,7 @@ class GraphState(TypedDict):
 from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 
 response_schemas = [
-    ResponseSchema(name="next_step", description="Must be either 'zerodha_agent' or 'end'"),
+    ResponseSchema(name="next_step", description="Must be either 'zerodha_agent' or 'end' or 'search_agent"),
     ResponseSchema(name="query", description="The query text from the user"),
     ResponseSchema(name="response", description="Your response to the query")
 ]
@@ -53,7 +81,7 @@ format_instructions = parser.get_format_instructions()
 prompt = PromptTemplate(
     template="""
 You are Master Agent. Answer ONLY in JSON with keys `next_step`, `query`, and `response`.
-Next step must be either "zerodha_agent" or "end".
+Next step must be either "zerodha_agent" or "end" or 'search_agent'. if the query is about latest news search about a company then and then only call search_agent
 User Query: {query}
 
 {format_instructions}
@@ -81,12 +109,22 @@ async def zerodha_node(state: GraphState) -> GraphState:
     return {"next_step": "master_agent", "query": f""" I am zerodha agent, this was the user query {state['query']} forwarded to me from you and this is what my answer to it {result} i have done my job now send this back to user """, "response": result}
 
 
+async def search_node(state: GraphState)->GraphState:
+    print(state["query"])
+
+    await SearchWrapper().setup()
+    result = await SearchWrapper().query(state["query"])
+
+    return {"next_step":"master_agent","query" : f""" I am search agent, this was the user query {state['query']} forwarded to me from you and this is what my answer to it {result} i have done my job now send this back to user""","response":result}
+
+
 from langgraph.graph import StateGraph, END
 
 graph = StateGraph(GraphState)
 
 graph.add_node("master_agent", master_agent_node)
 graph.add_node("zerodha_agent", zerodha_node)
+graph.add_node("search_agent",search_node)
 
 # Entry point
 graph.set_entry_point("master_agent")
@@ -97,15 +135,15 @@ graph.add_conditional_edges(
     lambda state: state["next_step"],
     {
         "zerodha_agent": "zerodha_agent",
-        "end": END
+        "end": END,
+        "search_agent":"search_agent"
     }
 )
 
 graph.add_edge("zerodha_agent", "master_agent")
+graph.add_edge("search_agent", "master_agent")
 
 app = graph.compile()
-
-# display(Image(app.get_graph().draw_mermaid_png()))
 
 
 if __name__ == "__main__":
@@ -118,7 +156,7 @@ if __name__ == "__main__":
                 break
             initial_state = {"next_step": "", "query": query, "response": ""}
             result = await app.ainvoke(initial_state)
-            print(result)
+            print(result["response"]["response"])
         
 
     asyncio.run(main())
