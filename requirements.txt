@@ -10,3 +10,5 @@ langchain-mcp-adapters
 langgraph
 langchain-groq
 pygraphviz
+langgraph.checkpoint.sqlite
+aiosqlite

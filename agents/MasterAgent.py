@@ -5,6 +5,8 @@ from langchain.prompts import PromptTemplate
 from ZerodhaAgent import CreateZerodhaAgent
 from IPython.display import Image, display
 from SearchAgent import CreateSearchAgent
+from langgraph.checkpoint.memory import InMemorySaver
+import sqlite3
 class ZerodhaWrapper:
     _instance = None
     _agent = None
@@ -143,19 +145,22 @@ graph.add_conditional_edges(
 graph.add_edge("zerodha_agent", "master_agent")
 graph.add_edge("search_agent", "master_agent")
 
-app = graph.compile()
+memory = InMemorySaver()
+
+app = graph.compile(checkpointer=memory)
 
 
 if __name__ == "__main__":
     import asyncio
 
     async def main():
+        config = {"configurable": {"thread_id": "10"}}
         while True:
             query = input()
             if query == "exit":
                 break
             initial_state = {"next_step": "", "query": query, "response": ""}
-            result = await app.ainvoke(initial_state)
+            result = await app.ainvoke(initial_state,config=config)
             print(result["response"]["response"])
         
 
