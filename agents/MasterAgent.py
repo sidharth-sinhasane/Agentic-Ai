@@ -2,11 +2,13 @@ from typing import TypedDict, Literal
 from langchain_openai import ChatOpenAI
 # from langchain.output_parsers import JsonOutputParser
 from langchain.prompts import PromptTemplate
-from ZerodhaAgent import CreateZerodhaAgent
+from .ZerodhaAgent import CreateZerodhaAgent
 from IPython.display import Image, display
-from SearchAgent import CreateSearchAgent
+from langgraph.graph import StateGraph, END
+from .SearchAgent import CreateSearchAgent
 from langgraph.checkpoint.memory import InMemorySaver
 import sqlite3
+import gradio as gr
 class ZerodhaWrapper:
     _instance = None
     _agent = None
@@ -93,7 +95,7 @@ User Query: {query}
 )
 
 
-master_llm = ChatOpenAI(model="gpt-4o", temperature=0)
+master_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
 async def master_agent_node(state: GraphState) -> GraphState:
@@ -120,7 +122,6 @@ async def search_node(state: GraphState)->GraphState:
     return {"next_step":"master_agent","query" : f""" I am search agent, this was the user query {state['query']} forwarded to me from you and this is what my answer to it {result} i have done my job now send this back to user""","response":result}
 
 
-from langgraph.graph import StateGraph, END
 
 graph = StateGraph(GraphState)
 
@@ -154,14 +155,22 @@ if __name__ == "__main__":
     import asyncio
 
     async def main():
-        config = {"configurable": {"thread_id": "10"}}
-        while True:
-            query = input()
-            if query == "exit":
-                break
-            initial_state = {"next_step": "", "query": query, "response": ""}
-            result = await app.ainvoke(initial_state,config=config)
-            print(result["response"]["response"])
+        # config = {"configurable": {"thread_id": "1"}}
+        # while True:
+        #     query = input()
+        #     if query == "exit":
+        #         break
+        #     initial_state = {"next_step": "", "query": query, "response": ""}
+        #     result = await app.ainvoke(initial_state,config=config)
+        #     print(result["response"]["response"])
+        async def chat(user_input: str, history):
+            config = {"configurable": {"thread_id": "10"}}
+            initial_state = {"next_step": "", "query": user_input, "response": ""}
+            result =await app.ainvoke(initial_state,config=config)
+            return result["response"]["response"]
+
+
+        gr.ChatInterface(chat, type="messages").launch()
         
 
     asyncio.run(main())

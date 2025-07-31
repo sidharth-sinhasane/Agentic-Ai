@@ -12,3 +12,6 @@ langchain-groq
 pygraphviz
 langgraph.checkpoint.sqlite
 aiosqlite
+gradio
+fastapi
+uvicorn
