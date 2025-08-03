@@ -99,8 +99,10 @@ master_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
 async def master_agent_node(state: GraphState) -> GraphState:
+    print(state)
     chain = prompt | master_llm | parser
     output = await chain.ainvoke({"query": state["query"]})
+    print(output)
     return {"next_step": output["next_step"], "query": output["query"], "response": output}
 
 
